@@ -31,3 +31,4 @@ backend/temp_media_*
 scratch/
 .gemini/
 
+seed_profile.js/
