@@ -1,5 +1,6 @@
 const { chromium } = require('playwright');
 const { generateLinkedInPost, generateHROutreach } = require('../outreach/content');
+const UserConfig = require('../../models/UserConfig');
 
 /**
  * Automatically logs into LinkedIn (requires existing session cookie or data dir),
@@ -14,8 +15,22 @@ async function autoPostToLinkedIn(topic) {
   console.log("Automatically posting to LinkedIn...");
   console.log("Drafted Content:", postContent);
 
+  const config = await UserConfig.findOne();
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext();
+
+  if (config && config.linkedinCookie) {
+    await context.addCookies([{
+      name: 'li_at',
+      value: config.linkedinCookie,
+      domain: '.www.linkedin.com',
+      path: '/',
+      httpOnly: true,
+      secure: true,
+      sameSite: 'None'
+    }]);
+  }
+
   const page = await context.newPage();
 
   try {
@@ -60,8 +75,22 @@ async function autoMessageHR(hrProfileUrl, hrName, companyName, roleName) {
   
   if (!outreachNote) return;
 
+  const config = await UserConfig.findOne();
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext();
+
+  if (config && config.linkedinCookie) {
+    await context.addCookies([{
+      name: 'li_at',
+      value: config.linkedinCookie,
+      domain: '.www.linkedin.com',
+      path: '/',
+      httpOnly: true,
+      secure: true,
+      sameSite: 'None'
+    }]);
+  }
+
   const page = await context.newPage();
 
   try {

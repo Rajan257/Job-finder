@@ -3,8 +3,10 @@ const { scrapeLinkedInJobs } = require('../services/scraper/linkedin');
 const { autoApplyLinkedIn } = require('../services/automation/autoApply');
 const { autoPostToLinkedIn } = require('../services/automation/outreachBot');
 const { analyzeJobDescription } = require('../services/ai/gemini');
+const { refreshLinkedInSession } = require('../services/automation/sessionRefresher');
 const Job = require('../models/Job');
 const UserProfile = require('../models/UserProfile');
+const UserConfig = require('../models/UserConfig');
 const { cosineSimilarity } = require('../utils/math');
 
 console.log("Autonomous Scheduler (Hourly) Initialized.");
@@ -25,7 +27,6 @@ cron.schedule('0 * * * *', async () => {
   console.log('--- STARTING HOURLY AUTONOMOUS MONITORING ---');
   try {
     // 1. Scrape new jobs (Using session cookie for deep scan)
-    const UserConfig = require('../models/UserConfig');
     const config = await UserConfig.findOne();
     const cookie = config ? config.linkedinCookie : null;
 
@@ -122,5 +123,19 @@ cron.schedule('* * * * *', async () => {
     }
   } catch (err) {
     console.error("[MinuteWorker] Critical Error:", err.message);
+  }
+});
+
+/**
+ * DAILY SESSION REFRESH WINDOW
+ * Runs at 9:00 PM to open a visible browser and refresh the LinkedIn cookie.
+ */
+cron.schedule('0 21 * * *', async () => {
+  console.log('--- STARTING DAILY SESSION REFRESH (9:00 PM) ---');
+  try {
+    await refreshLinkedInSession();
+    console.log('--- DAILY SESSION REFRESH COMPLETE ---');
+  } catch (error) {
+    console.error("Session Refresh Scheduler Error:", error);
   }
 });

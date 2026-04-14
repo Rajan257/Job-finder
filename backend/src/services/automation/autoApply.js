@@ -1,5 +1,6 @@
 const { chromium } = require('playwright');
 const { generateText } = require('../ai/gemini');
+const UserConfig = require('../../models/UserConfig');
 
 /**
  * Automates applying to a job using LinkedIn Easy Apply.
@@ -8,10 +9,22 @@ const { generateText } = require('../ai/gemini');
  * @param {object} profile User profile object with resume details
  */
 async function autoApplyLinkedIn(jobUrl, profile) {
-  // Use a user data dir so we can keep session cookies
-  // Or pass a cookie array via context.addCookies()
+  const config = await UserConfig.findOne();
   const browser = await chromium.launch({ headless: true }); 
   const context = await browser.newContext();
+
+  if (config && config.linkedinCookie) {
+    await context.addCookies([{
+      name: 'li_at',
+      value: config.linkedinCookie,
+      domain: '.www.linkedin.com',
+      path: '/',
+      httpOnly: true,
+      secure: true,
+      sameSite: 'None'
+    }]);
+  }
+
   const page = await context.newPage();
 
   console.log(`Starting auto-apply for: ${jobUrl}`);
