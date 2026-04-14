@@ -1,6 +1,6 @@
 #  AI Job Hunter: Your Autonomous Career Partner
 
-**Finding the right opportunity shouldn't be a second full-time job.** This assistant is a human-centric, AI-powered system designed to automate the repetitive parts of the internship hunt—so you can focus on the interviews that matter.
+**Finding the right opportunity shouldn't be a second full-time job.** This assistant is a human-centric, AI-powered system designed to automate the repetitive parts of the internship hunt-so you can focus on the interviews that matter.
 
 Built with **Google Gemini AI**, **Node.js**, **Playwright**, and **React**, it transforms your local machine into a high-performance career agent.
 
