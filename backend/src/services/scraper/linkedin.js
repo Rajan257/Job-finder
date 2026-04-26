@@ -40,7 +40,7 @@ async function scrapeLinkedInJobs(keyword, location, sessionCookie) {
     await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
 
     // Wait for the job list to load
-    await page.waitForSelector('.jobs-search-results-list', { timeout: 15000 }).catch(() => null);
+    await page.waitForSelector('.jobs-search-results-list, .jobs-search__results-list', { timeout: 15000 }).catch(() => null);
 
     // DEEP SCROLL: Scroll the job list pane to load more items
     console.log("📜 Scrolling to discover 'huge amounts' of jobs...");
@@ -53,24 +53,43 @@ async function scrapeLinkedInJobs(keyword, location, sessionCookie) {
     }
 
     // Capture job items (Using common selectors for logged-in view)
-    const jobItems = await page.locator('.jobs-search-results__list-item').all();
-    console.log(`🎯 Found ${jobItems.length} potential matches.`);
+    let jobItems = await page.locator('.jobs-search-results__list-item').all();
+    let isGuest = false;
+
+    if (jobItems.length === 0) {
+      // Try guest view selectors
+      jobItems = await page.locator('.base-card').all();
+      if (jobItems.length > 0) isGuest = true;
+    }
+
+    console.log(`🎯 Found ${jobItems.length} potential matches. (Guest view: ${isGuest})`);
 
     for (const item of jobItems.slice(0, 25)) { // Increase limit to 25
       try {
-        const title = await item.locator('.job-card-list__title').innerText().catch(() => 'Unknown');
-        const company = await item.locator('.job-card-container__primary-description').innerText().catch(() => 'Unknown');
-        const link = await item.locator('a.job-card-list__title').getAttribute('href').catch(() => '');
-        const jobLocation = await item.locator('.job-card-container__metadata-item').first().innerText().catch(() => 'Remote');
+        let title, company, link, jobLocation, recruiterName, recruiterLink;
 
-        const jobLink = link ? (link.startsWith('http') ? link : `https://www.linkedin.com${link}`) : '';
+        if (isGuest) {
+          title = await item.locator('.base-search-card__title').innerText().catch(() => 'Unknown');
+          company = await item.locator('.base-search-card__subtitle').innerText().catch(() => 'Unknown');
+          link = await item.locator('.base-card__full-link').getAttribute('href').catch(() => '');
+          jobLocation = await item.locator('.job-search-card__location').innerText().catch(() => 'Remote');
+          recruiterName = '';
+          recruiterLink = '';
+        } else {
+          title = await item.locator('.job-card-list__title').innerText().catch(() => 'Unknown');
+          company = await item.locator('.job-card-container__primary-description').innerText().catch(() => 'Unknown');
+          link = await item.locator('a.job-card-list__title').getAttribute('href').catch(() => '');
+          jobLocation = await item.locator('.job-card-container__metadata-item').first().innerText().catch(() => 'Remote');
+          recruiterName = await item.locator('.jobs-poster__name').innerText().catch(() => '');
+          recruiterLink = await item.locator('.jobs-poster__name-link').getAttribute('href').catch(() => '');
+        }
+
+        const cleanLink = link ? link.split('?')[0] : '';
+        const jobLink = cleanLink ? (cleanLink.startsWith('http') ? cleanLink : `https://www.linkedin.com${cleanLink}`) : '';
         if (!jobLink) continue;
 
         const existingJob = await Job.findOne({ jobLink });
         if (!existingJob) {
-          // Identify recruiter/poster if available
-          const recruiterName = await item.locator('.jobs-poster__name').innerText().catch(() => '');
-          const recruiterLink = await item.locator('.jobs-poster__name-link').getAttribute('href').catch(() => '');
 
           const description = `${title} at ${company}. Located in ${jobLocation}.`;
           const embedding = await generateEmbedding(description);
